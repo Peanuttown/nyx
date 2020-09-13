@@ -1,15 +1,15 @@
 package tap
 
 import (
-	"fmt"
 	"os"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+    "github.com/Peanuttown/tzzGoUtil/sys/io"
 )
 
 type Tap struct {
+	file *os.File
 }
 
 func NewTap(devName string) (TapI, error) {
@@ -17,31 +17,23 @@ func NewTap(devName string) (TapI, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := f.SyscallConn()
-	if err != nil {
-		return nil, err
-	}
 
 	var ifr [unix.IFNAMSIZ + 64]byte
 	copy(ifr[:], []byte(devName))
-	*(*uint16)(unsafe.Pointer(&ifr[unix.IFNAMSIZ])) = unix.IFF_TUN
-	var errno syscall.Errno
-	err = conn.Control(
-		func(fd uintptr) {
-			_, _, errno = unix.Syscall(
-				unix.SYS_IOCTL,
-				fd,
-				uintptr(unix.TUNSETIFF),
-				uintptr(unsafe.Pointer(&ifr[0])),
-			)
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-	if errno != 0 {
-		err = fmt.Errorf("创建失败, %w", errno)
-		return nil, err
-	}
-	return nil, nil
+	*(*uint16)(unsafe.Pointer(&ifr[unix.IFNAMSIZ])) = unix.IFF_TAP
+    err = io.IOCtl(
+        f.Fd(),
+        unix.TUNSETIFF,
+        uintptr(unsafe.Pointer(&ifr[0])),
+    )
+    if err != nil{
+        return nil,err
+    }
+	return &Tap{
+		file: os.NewFile(f.Fd(), devName),
+	}, nil
+}
+
+func (this *Tap) Read(b []byte) (n int, err error) {
+	return this.file.Read(b)
 }
