@@ -4,8 +4,8 @@ import (
 	"os"
 	"unsafe"
 
+	"github.com/Peanuttown/tzzGoUtil/sys/io"
 	"golang.org/x/sys/unix"
-    "github.com/Peanuttown/tzzGoUtil/sys/io"
 )
 
 type Tap struct {
@@ -20,15 +20,15 @@ func NewTap(devName string) (TapI, error) {
 
 	var ifr [unix.IFNAMSIZ + 64]byte
 	copy(ifr[:], []byte(devName))
-	*(*uint16)(unsafe.Pointer(&ifr[unix.IFNAMSIZ])) = unix.IFF_TAP
-    err = io.IOCtl(
-        f.Fd(),
-        unix.TUNSETIFF,
-        uintptr(unsafe.Pointer(&ifr[0])),
-    )
-    if err != nil{
-        return nil,err
-    }
+	*(*uint16)(unsafe.Pointer(&ifr[unix.IFNAMSIZ])) = unix.IFF_TAP | unix.IFF_NO_PI
+	err = io.IOCtl(
+		f.Fd(),
+		unix.TUNSETIFF,
+		uintptr(unsafe.Pointer(&ifr[0])),
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &Tap{
 		file: os.NewFile(f.Fd(), devName),
 	}, nil

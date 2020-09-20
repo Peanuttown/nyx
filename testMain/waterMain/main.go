@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Peanuttown/tzzGoUtil/net"
 	"github.com/songgao/water"
 )
 
@@ -21,6 +22,12 @@ func main() {
 			os.Exit(1)
 		}
 		log.Println(string(b[:n]))
+		icmp,err := net.DecodeICMPV4(b[:n])
+		if err != nil{
+			log.Println(err)
+			continue
+		}
+		log.Println(icmp.Contents)
 	}
 
 }
